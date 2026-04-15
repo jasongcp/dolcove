@@ -1,0 +1,3 @@
+-- Deprecated single-file migration. This file was split into .up.sql and .down.sql pair.
+-- See db/migrations/2026-04-15_0001_create_initial_schema.up.sql
+-- and db/migrations/2026-04-15_0001_create_initial_schema.down.sql for the executable migration files.
