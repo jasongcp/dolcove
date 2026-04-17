@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import type { MessageCreatedEvent } from '@dolcove/shared';
+
 import { MessagesService } from '../src/modules/messages/messages.service';
 import { buildApp } from '../src/app';
 
@@ -245,8 +247,9 @@ test('MessagesService returns null when listing messages for a group the authent
   assert.equal(result, null);
 });
 
-test('MessagesService creates a text message only when the authenticated user is a group member', async () => {
+test('MessagesService creates a text message only when the authenticated user is a group member and emits a stable message-created event', async () => {
   const queries: Array<{ text: string; values: readonly unknown[] | undefined }> = [];
+  const emittedEvents: MessageCreatedEvent[] = [];
 
   const messagesService = new MessagesService(
     {
@@ -272,7 +275,10 @@ test('MessagesService creates a text message only when the authenticated user is
         return { rows: [{ exists: true }] as T[] };
       }
     },
-    () => '11111111-1111-4111-8111-111111111111'
+    () => '11111111-1111-4111-8111-111111111111',
+    (event) => {
+      emittedEvents.push(event);
+    }
   );
 
   const createdMessage = await messagesService.createTextMessageForUserInGroup({
@@ -302,14 +308,33 @@ test('MessagesService creates a text message only when the authenticated user is
     mediaUrl: null,
     createdAt: '2026-04-12T00:00:00.000Z'
   });
+  assert.deepEqual(emittedEvents, [
+    {
+      type: 'message.created',
+      occurredAt: '2026-04-12T00:00:00.000Z',
+      payload: {
+        messageId: 'msg_11111111-1111-4111-8111-111111111111',
+        groupId: 'grp_weekend-crew',
+        senderId: 'usr_dev-token',
+        createdAt: '2026-04-12T00:00:00.000Z'
+      }
+    }
+  ]);
 });
 
-test('MessagesService returns null when creating a message for a group the authenticated user is not a member of', async () => {
-  const messagesService = new MessagesService({
-    async query<T>() {
-      return { rows: [] as T[] };
+test('MessagesService returns null and emits no event when creating a message for a group the authenticated user is not a member of', async () => {
+  const emittedEvents: MessageCreatedEvent[] = [];
+  const messagesService = new MessagesService(
+    {
+      async query<T>() {
+        return { rows: [] as T[] };
+      }
+    },
+    undefined,
+    (event) => {
+      emittedEvents.push(event);
     }
-  });
+  );
 
   const result = await messagesService.createTextMessageForUserInGroup({
     groupId: 'grp_private-group',
@@ -318,6 +343,38 @@ test('MessagesService returns null when creating a message for a group the authe
   });
 
   assert.equal(result, null);
+  assert.deepEqual(emittedEvents, []);
+});
+
+test('MessagesService emits no event when message creation fails after membership access succeeds', async () => {
+  const emittedEvents: MessageCreatedEvent[] = [];
+  const messagesService = new MessagesService(
+    {
+      async query<T>(text: string) {
+        if (/insert into messages/i.test(text)) {
+          throw new Error('insert failed');
+        }
+
+        return { rows: [{ exists: true }] as T[] };
+      }
+    },
+    () => '11111111-1111-4111-8111-111111111111',
+    (event) => {
+      emittedEvents.push(event);
+    }
+  );
+
+  await assert.rejects(
+    () =>
+      messagesService.createTextMessageForUserInGroup({
+        groupId: 'grp_weekend-crew',
+        userId: 'usr_dev-token',
+        text: 'Dinner on Friday?'
+      }),
+    /insert failed/
+  );
+
+  assert.deepEqual(emittedEvents, []);
 });
 
 test('GET /v1/groups/:groupId/messages rejects unauthenticated requests', async () => {
