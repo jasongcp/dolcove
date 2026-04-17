@@ -92,6 +92,58 @@ export const createMessageCreatedMemoryJob = (
   };
 };
 
+export interface Recap {
+  id: string;
+  groupId: string;
+  periodStart: string;
+  periodEnd: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface RecapRequestedEvent {
+  type: 'recap.requested';
+  occurredAt: string;
+  payload: {
+    groupId: string;
+    requestedBy: string;
+    periodStart: string;
+    periodEnd: string;
+  };
+}
+
+export interface RecapGenerationJob {
+  id: string;
+  type: 'recap.generate';
+  occurredAt: string;
+  payload: {
+    sourceEvent: 'recap.requested';
+    groupId: string;
+    requestedBy: string;
+    periodStart: string;
+    periodEnd: string;
+  };
+}
+
+export type RecapJob = RecapGenerationJob;
+
+export const createRecapGenerationJob = (
+  event: RecapRequestedEvent
+): RecapGenerationJob => {
+  return {
+    id: `recapjob_${event.payload.groupId}_${event.payload.periodStart}_${event.payload.periodEnd}`,
+    type: 'recap.generate',
+    occurredAt: event.occurredAt,
+    payload: {
+      sourceEvent: event.type,
+      groupId: event.payload.groupId,
+      requestedBy: event.payload.requestedBy,
+      periodStart: event.payload.periodStart,
+      periodEnd: event.payload.periodEnd
+    }
+  };
+};
+
 export interface HealthStatus {
   status: 'ok';
 }

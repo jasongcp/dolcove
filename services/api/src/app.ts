@@ -4,6 +4,7 @@ import authModule from './modules/auth';
 import groupsModule from './modules/groups';
 import messagesModule from './modules/messages';
 import plansModule from './modules/plans';
+import recapsModule from './modules/recaps';
 import dbPlugin from './plugins/db';
 import healthRoute from './routes/health';
 
@@ -17,6 +18,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
   await app.register(groupsModule);
   await app.register(messagesModule);
   await app.register(plansModule);
+  await app.register(recapsModule);
   await app.register(healthRoute);
 
   return app;

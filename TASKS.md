@@ -296,6 +296,31 @@ Owner:
 Scope:
 - create recap generation job scaffold
 - define trigger contract
+- add a stable shared recap-requested to recap-job contract
+- keep worker boot thin and delegate recap queue/processor behavior to worker-layer modules
+- keep recap processor as a no-op placeholder until recap intelligence is approved
+- add a service-level recap trigger path that can emit the shared recap-requested event without introducing async infrastructure yet
 
 Acceptance criteria:
 - recap worker can be invoked with group and time range
+- recap-requested activity can enqueue a stable recap job contract
+- worker can dequeue and hand the recap job to a processor path without implementing recap logic yet
+- successful recap trigger conditions emit the stable shared recap-requested event contract and invalid trigger conditions do not emit one
+
+### T-019 Recap API skeleton
+Owner:
+- Backend Agent
+
+Scope:
+- add protected `GET /v1/groups/:groupId/recaps`
+- keep route-level auth using the existing `requireSession` pattern
+- keep controllers thin and DB logic in a recaps service
+- filter recap reads by authenticated membership in the target group
+- return a stable recap list envelope aligned to `API_CONTRACTS.md`
+
+Acceptance criteria:
+- unauthenticated requests are rejected with the structured auth envelope
+- non-members receive a structured non-leaky `GROUP_NOT_FOUND` response
+- authenticated members can fetch recap lists with a stable response shape
+- members with no recaps receive `{ ok: true, data: [] }`
+- recap list queries are filtered by `group_members.user_id` and ordered by `period_start DESC, id DESC`
