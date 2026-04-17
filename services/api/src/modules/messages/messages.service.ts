@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { MessageCreatedEvent } from '@dolcove/shared';
+
 import type {
   CreateTextMessageInput,
   MessageItem,
@@ -26,6 +28,10 @@ interface MessageCursorPayload {
   id: string;
 }
 
+export type MessageCreatedEventEmitter = (
+  event: MessageCreatedEvent
+) => Promise<void> | void;
+
 export class InvalidMessageCursorError extends Error {
   constructor() {
     super('Invalid cursor payload');
@@ -43,7 +49,8 @@ const MAX_MESSAGE_LIMIT = 100;
 export class MessagesService {
   constructor(
     private readonly db: MessagesDatabase,
-    private readonly generateId: () => string = randomUUID
+    private readonly generateId: () => string = randomUUID,
+    private readonly emitMessageCreatedEvent: MessageCreatedEventEmitter = async () => {}
   ) {}
 
   async listMessagesForUserInGroup(input: MessageListInput): Promise<MessageListResult | null> {
@@ -167,7 +174,11 @@ export class MessagesService {
       [messageId, input.groupId, input.userId, input.text]
     );
 
-    return this.mapMessage(result.rows[0]);
+    const message = this.mapMessage(result.rows[0]);
+
+    await this.emitMessageCreatedEvent(this.createMessageCreatedEvent(message));
+
+    return message;
   }
 
   private normalizeLimit(limit?: number): number {
@@ -238,6 +249,19 @@ export class MessagesService {
     );
 
     return result.rows.length > 0;
+  }
+
+  private createMessageCreatedEvent(message: MessageItem): MessageCreatedEvent {
+    return {
+      type: 'message.created',
+      occurredAt: message.createdAt,
+      payload: {
+        messageId: message.id,
+        groupId: message.groupId,
+        senderId: message.senderId,
+        createdAt: message.createdAt
+      }
+    };
   }
 
   private mapMessage(row: MessageRow): MessageItem {

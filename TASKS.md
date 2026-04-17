@@ -169,6 +169,7 @@ Scope:
 - apply real cursor pagination using deterministic `(created_at, id)` ordering
 - add protected single-message retrieval with membership-filtered access
 - reject malformed message cursors with a structured bad-request response
+- emit a stable shared `message.created` event contract after successful message creation without introducing async infrastructure yet
 
 Acceptance criteria:
 - user can send and fetch messages only for joined groups
@@ -180,6 +181,7 @@ Acceptance criteria:
 - cursor pagination uses stable ordering and only returns `nextCursor` when more rows exist
 - `GET /v1/groups/:groupId/messages/:messageId` returns 404 for both missing and inaccessible messages
 - malformed cursors return a structured 400 response instead of surfacing as internal errors
+- successful message creation produces a stable shared `message.created` event contract and denied/failed creates do not emit one
 
 ### T-011 Chat screen shell
 Owner:
