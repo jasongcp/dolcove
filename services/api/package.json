@@ -1,0 +1,17 @@
+{
+  "name": "@dolcove/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "test": "tsx --test test/**/*.test.ts"
+  },
+  "dependencies": {
+    "@dolcove/shared": "file:../../packages/shared",
+    "fastify": "^4.29.1",
+    "fastify-plugin": "^5.0.1",
+    "pg": "^8.14.1"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "dolcove-backend",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @dolcove/api",
+    "dev:api": "npm run dev --workspace @dolcove/api",
+    "dev:worker": "npm run dev --workspace @dolcove/worker",
+    "build": "tsc -b packages/shared services/api services/worker",
+    "start": "npm run start --workspace @dolcove/api",
+    "start:api": "npm run start --workspace @dolcove/api",
+    "start:worker": "npm run start --workspace @dolcove/worker",
+    "test": "npm run test --workspace @dolcove/api"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "@types/pg": "^8.15.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -17,6 +17,23 @@ Acceptance criteria:
 - empty packages/services boot without structural errors
 - docs files exist
 
+### T-001A Backend monorepo skeleton
+Owner:
+- Architect Agent
+- Backend Agent
+
+Scope:
+- replace root placeholder API/worker bootstrap with a workspace-based TypeScript monorepo skeleton
+- scaffold `services/api`, `services/worker`, and `packages/shared`
+- add API health route, DB plugin shell, and worker heartbeat loop
+
+Acceptance criteria:
+- root package uses workspaces
+- API exposes `GET /health` returning `{ status: "ok" }`
+- worker boots and logs a heartbeat on an interval
+- shared package exports base entity and response contract types
+- root and service-level `dev`, `build`, and `start` scripts exist where applicable
+
 ### T-002 Shared types package
 Owner:
 - Architect Agent
@@ -81,11 +98,13 @@ Scope:
 - add create-group endpoint
 - persist group and owner membership
 - return shared group response type
+- perform minimal explicit request validation at the route edge
 
 Acceptance criteria:
 - authenticated user can create a group
 - owner membership is automatically created
 - tests cover service logic
+- invalid payloads are rejected with a structured error response
 
 ### T-007 Create group screen
 Owner:
@@ -109,10 +128,18 @@ Scope:
 - add list-groups endpoint
 - create group list screen
 - render user memberships
+- start with a protected backend scaffold using a groups service layer and stable response envelope
+- back the backend endpoint with Postgres queries filtered by authenticated membership
+- keep `lastActivityAt` derived from safe always-present group timestamps until message activity dependency is explicitly needed
+- add protected single-group detail retrieval filtered by authenticated membership
 
 Acceptance criteria:
 - groups load correctly for authenticated user
 - screen supports loading and empty states
+- `GET /v1/groups` rejects unauthenticated requests
+- `GET /v1/groups` returns a stable list response shape for authenticated requests
+- groups are filtered by `group_members.user_id` for the authenticated user
+- `GET /v1/groups/:groupId` returns detail only when the authenticated user is a member
 
 ## Sprint 2 - Messaging
 
@@ -136,9 +163,23 @@ Scope:
 - create send-message endpoint
 - create list-messages endpoint
 - validate membership access
+- start with simple text-message support only
+- add schema-validated protected routes under the messages module
+- make message list response cursor-ready with basic limit support
+- apply real cursor pagination using deterministic `(created_at, id)` ordering
+- add protected single-message retrieval with membership-filtered access
+- reject malformed message cursors with a structured bad-request response
 
 Acceptance criteria:
 - user can send and fetch messages only for joined groups
+- `GET /v1/groups/:groupId/messages` rejects unauthenticated requests
+- `POST /v1/groups/:groupId/messages` rejects unauthenticated requests
+- non-members do not receive message list/send access for the group
+- authenticated members can list and send text messages with stable response envelopes
+- message list supports a simple limit input while keeping `nextCursor` future-ready
+- cursor pagination uses stable ordering and only returns `nextCursor` when more rows exist
+- `GET /v1/groups/:groupId/messages/:messageId` returns 404 for both missing and inaccessible messages
+- malformed cursors return a structured 400 response instead of surfacing as internal errors
 
 ### T-011 Chat screen shell
 Owner:
@@ -175,9 +216,24 @@ Scope:
 - create plan proposal endpoint
 - create vote endpoint
 - return structured plan objects
+- scaffold a dedicated plans module with route-level auth and service-owned DB logic
+- enforce membership-filtered access for both create and vote flows
+- add schema-validated request and response contracts for the initial plan routes
+- add protected plan list retrieval scoped to a group and filtered by authenticated membership
+- add protected single-plan detail retrieval filtered by authenticated membership in the plan's group
+- explicitly cover invalid create/vote payloads with route-level tests
 
 Acceptance criteria:
 - plan creation and voting work for members
+- `GET /v1/groups/:groupId/plans` rejects unauthenticated requests
+- `GET /v1/plans/:planId` rejects unauthenticated requests
+- `POST /v1/groups/:groupId/plans` rejects unauthenticated requests
+- `POST /v1/plans/:planId/votes` rejects unauthenticated requests
+- inaccessible groups and plans return structured non-leaky 404 responses
+- authenticated members can list proposed plans, fetch a single plan detail, create proposed plans, and vote with stable response envelopes
+- plan list is filtered by authenticated `group_members.user_id` access for the target group
+- plan detail is filtered by authenticated membership in the plan's group
+- invalid create/vote payloads are rejected with structured bad-request responses
 
 ### T-014 Plan cards on mobile
 Owner:
@@ -211,9 +267,14 @@ Owner:
 Scope:
 - create worker entry point for memory jobs
 - trigger from message-created events
+- define a stable message-created to memory-job contract in shared types
+- keep worker boot thin and delegate queue/processing behavior to worker-layer modules
+- scaffold the processor as a no-op placeholder until real memory extraction work is approved
 
 Acceptance criteria:
 - message event can enqueue a memory job
+- worker exposes a stable memory job contract for message-created activity
+- worker can dequeue and hand a memory job to a processor path without implementing extraction logic yet
 
 ### T-017 Recap schema
 Owner:
